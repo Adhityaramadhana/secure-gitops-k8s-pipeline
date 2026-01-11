@@ -1,0 +1,6 @@
+image:
+  repository: local/secure-gitops-k8s-pipeline
+  tag: ci
+
+service:
+  port: 8000

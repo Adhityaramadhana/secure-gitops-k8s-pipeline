@@ -1,0 +1,6 @@
+apiVersion: v2
+name: secure-gitops-k8s-pipeline
+description: FastAPI app with secure CI/CD + policy gates
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

@@ -1,0 +1,70 @@
+name: Release (GHCR + SBOM + Sign)
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set lowercase owner/repo/tag
+        id: meta
+        run: |
+          echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_OUTPUT
+          echo "REPO_NAME=${GITHUB_REPOSITORY#*/}" >> $GITHUB_OUTPUT
+          echo "TAG=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push (multi-arch)
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            APP_VERSION=${{ steps.meta.outputs.TAG }}
+          tags: |
+            ghcr.io/${{ steps.meta.outputs.OWNER_LC }}/${{ steps.meta.outputs.REPO_NAME }}:${{ steps.meta.outputs.TAG }}
+            ghcr.io/${{ steps.meta.outputs.OWNER_LC }}/${{ steps.meta.outputs.REPO_NAME }}:latest
+
+      - name: Generate SBOM (CycloneDX)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ghcr.io/${{ steps.meta.outputs.OWNER_LC }}/${{ steps.meta.outputs.REPO_NAME }}:latest
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.10.0
+
+      - name: Cosign keyless sign (latest)
+        run: |
+          cosign sign --yes ghcr.io/${{ steps.meta.outputs.OWNER_LC }}/${{ steps.meta.outputs.REPO_NAME }}:latest
+
+      - name: Create GitHub Release (attach SBOM)
+        uses: softprops/action-gh-release@v2
+        with:
+          files: sbom.cdx.json
+          generate_release_notes: true

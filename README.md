@@ -1,5 +1,7 @@
 # Secure GitOps K8s Pipeline Demo
 
+[![CI](https://github.com/Adhityaramadhana/secure-gitops-k8s-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/Adhityaramadhana/secure-gitops-k8s-pipeline/actions/workflows/ci.yml)
+
 A production-grade CI/CD pipeline demo showcasing security-first Kubernetes deployment with quality gates, policy-as-code validation, and automated testing.
 
 ## Features

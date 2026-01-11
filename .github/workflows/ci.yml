@@ -103,6 +103,9 @@ jobs:
 
       - name: Debug - Check pods
         run: |
+          echo "Waiting 15 seconds for pod to start or fail..."
+          sleep 15
+          echo ""
           echo "=== Pods ==="
           kubectl get pods -o wide
           echo ""
@@ -111,6 +114,9 @@ jobs:
           echo ""
           echo "=== Pod logs (if running) ==="
           kubectl logs -l app=demo --all-containers=true --tail=50 || true
+          echo ""
+          echo "=== Check if image exists in node ==="
+          docker exec demo-control-plane crictl images | grep secure-gitops-k8s-pipeline || echo "Image not found in node!"
 
       - name: Wait for rollout
         run: |

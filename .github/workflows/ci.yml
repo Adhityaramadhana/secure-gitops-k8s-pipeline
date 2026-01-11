@@ -48,16 +48,29 @@ jobs:
           severity: CRITICAL,HIGH
 
       - name: Upload Trivy SARIF
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-results.sarif
 
-      - name: Install Helm + kubeconform + conftest
+      - name: Install kubeconform + conftest
         run: |
-          curl -sSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar -xz
+          set -euo pipefail
+
+          # kubeconform (resolve latest linux-amd64 tar.gz)
+          KUBECONFORM_URL="$(curl -s https://api.github.com/repos/yannh/kubeconform/releases/latest \
+            | python -c "import sys, json; r=json.load(sys.stdin); \
+            print([a['browser_download_url'] for a in r['assets'] if a['name'].endswith('linux-amd64.tar.gz')][0])")"
+          curl -sSL "$KUBECONFORM_URL" -o kubeconform.tar.gz
+          tar -xzf kubeconform.tar.gz
           sudo mv kubeconform /usr/local/bin/kubeconform
-          curl -sSL https://github.com/open-policy-agent/conftest/releases/latest/download/conftest_0.56.0_Linux_x86_64.tar.gz | tar -xz
+          kubeconform -v
+
+          # conftest (pin version)
+          CONFTEST_VERSION="0.56.0"
+          curl -sSL "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" -o conftest.tar.gz
+          tar -xzf conftest.tar.gz
           sudo mv conftest /usr/local/bin/conftest
+          conftest --version
 
       - name: Render Helm template
         run: |
